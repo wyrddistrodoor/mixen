@@ -22,28 +22,27 @@
         .clear {
             clear: left;
         }
+        .buttons { display: flex; gap: 12px; flex-wrap: wrap; margin: 24px 0; }
+        .button {
+            background: #3f6b3a;
+            color: white;
+            padding: 12px 24px;
+            border-radius: 8px;
+            text-decoration: none;
+        }
+        .button:hover { background: #2e5029; }
     </style>
 </head>
 <body>
     <h1>Mixen: Wyrt in the dirt.</h1>
 
+    <div class="buttons">
+        <a class="button" href="about.html">About</a>
+        <a class="button" href="weather.html">Weather</a>
+    </div>
+
     <img src="garden-photo.jpg" alt="Garden photo of wildflowers and soil">
 
     <div class="clear"></div>
-    <div class="buttons">
-    <a class="button" href="about.html">About</a>
-</div>
-
-<style>
-    .buttons { display: flex; gap: 12px; flex-wrap: wrap; margin: 24px 0; }
-    .button {
-        background: #3f6b3a;
-        color: white;
-        padding: 12px 24px;
-        border-radius: 8px;
-        text-decoration: none;
-    }
-    .button:hover { background: #2e5029; }
-</style>
 </body>
 </html>
