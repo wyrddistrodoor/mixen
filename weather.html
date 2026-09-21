@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Mixen: Weather</title>
+    <style>
+        body {
+            background: white;
+            color: green;
+            font-size: 16px;
+            font-family: Courier, monospace;
+            line-height: 1.5;
+            max-width: 52rem;
+            margin: 0 auto;
+            padding: 1.5rem 1rem 3rem;
+        }
+        a { color: green; }
+        a:focus-visible { outline: 2px solid green; outline-offset: 3px; }
+        h1 { margin-top: 0; }
+        .scroll { overflow-x: auto; }
+        table { border-collapse: collapse; width: 100%; min-width: 36rem; }
+        th, td {
+            border: 1px solid green;
+            padding: 0.5rem 0.75rem;
+            text-align: left;
+            vertical-align: top;
+        }
+        thead th { border-bottom-width: 3px; }
+        .small { display: block; font-size: 0.85rem; font-weight: normal; }
+        h2 { font-size: 1.1rem; margin: 2rem 0 0.5rem; }
+        ul { padding-left: 1.25rem; margin-top: 0.5rem; }
+        li { margin-bottom: 0.4rem; }
+        #status { margin: 1rem 0; }
+        .credit { margin-top: 1rem; }
+    </style>
+</head>
+<body>
+    <h1>Mixen: Weather</h1>
+    <p>Current weather conditions in Northern New Mexico.</p>
+
+    <p id="status" role="status">Loading the latest readings...</p>
+
+    <div class="scroll">
+        <table id="weather" aria-label="Current weather conditions in Northern New Mexico" hidden>
+            <thead>
+                <tr>
+                    <th scope="col">Place</th>
+                    <th scope="col">Sky</th>
+                    <th scope="col">Temp</th>
+                    <th scope="col">Feels like</th>
+                    <th scope="col">Humidity</th>
+                    <th scope="col">Wind</th>
+                    <th scope="col">Precip, past hour</th>
+                </tr>
+            </thead>
+            <tbody></tbody>
+        </table>
+    </div>
+
+    <p class="credit" id="credit" hidden>Weather data by <a href="https://open-meteo.com/">Open-Meteo.com</a></p>
+
+    <h2>Full forecasts from the National Weather Service</h2>
+    <ul>
+        <li><a href="https://forecast.weather.gov/MapClick.php?lat=35.0844&amp;lon=-106.6504">Albuquerque</a></li>
+        <li><a href="https://forecast.weather.gov/MapClick.php?lat=35.687&amp;lon=-105.9378">Santa Fe</a></li>
+        <li><a href="https://forecast.weather.gov/MapClick.php?lat=36.4072&amp;lon=-105.5734">Taos</a></li>
+    </ul>
+
+    <p><a href="./">Back home</a></p>
+
+    <script>
+        // The places shown on the page. To add or change one, edit this list.
+        var places = [
+            { name: "Albuquerque", lat: 35.08, lon: -106.65 },
+            { name: "Santa Fe",    lat: 35.69, lon: -105.94 },
+            { name: "Taos",        lat: 36.41, lon: -105.57 }
+        ];
+
+        // Plain-English names for Open-Meteo's weather codes.
+        var skyNames = {
+            0: "Clear", 1: "Mostly clear", 2: "Partly cloudy", 3: "Overcast",
+            45: "Fog", 48: "Freezing fog",
+            51: "Light drizzle", 53: "Drizzle", 55: "Heavy drizzle",
+            56: "Freezing drizzle", 57: "Freezing drizzle",
+            61: "Light rain", 63: "Rain", 65: "Heavy rain",
+            66: "Freezing rain", 67: "Freezing rain",
+            71: "Light snow", 73: "Snow", 75: "Heavy snow", 77: "Snow grains",
+            80: "Rain showers", 81: "Rain showers", 82: "Heavy rain showers",
+            85: "Snow showers", 86: "Snow showers",
+            95: "Thunderstorm", 96: "Thunderstorm with hail", 99: "Thunderstorm with hail"
+        };
+
+        function formatTime(iso) {
+            var parts = iso.split("T")[1].split(":");
+            var hours = Number(parts[0]);
+            var minutes = parts[1];
+            var suffix = hours >= 12 ? "PM" : "AM";
+            return ((hours % 12) || 12) + ":" + minutes + " " + suffix;
+        }
+
+        function loadWeather() {
+            var status = document.getElementById("status");
+            var table = document.getElementById("weather");
+            var body = table.querySelector("tbody");
+
+            var params = new URLSearchParams({
+                latitude: places.map(function (p) { return p.lat; }).join(","),
+                longitude: places.map(function (p) { return p.lon; }).join(","),
+                current: "temperature_2m,apparent_temperature,relative_humidity_2m,precipitation,weather_code,wind_speed_10m",
+                temperature_unit: "fahrenheit",
+                wind_speed_unit: "mph",
+                precipitation_unit: "inch",
+                timezone: "America/Denver"
+            });
+
+            fetch("https://api.open-meteo.com/v1/forecast?" + params)
+                .then(function (response) {
+                    if (!response.ok) { throw new Error("Weather service returned " + response.status); }
+                    return response.json();
+                })
+                .then(function (data) {
+                    var results = Array.isArray(data) ? data : [data];
+                    body.textContent = "";
+
+                    results.forEach(function (result, i) {
+                        var c = result.current;
+                        var row = document.createElement("tr");
+
+                        var nameCell = document.createElement("th");
+                        nameCell.scope = "row";
+                        nameCell.textContent = places[i].name;
+                        var elevation = document.createElement("span");
+                        elevation.className = "small";
+                        elevation.textContent = Math.round(result.elevation * 3.28084).toLocaleString("en-US") + " ft";
+                        nameCell.appendChild(elevation);
+                        row.appendChild(nameCell);
+
+                        [
+                            skyNames[c.weather_code] || "Unknown",
+                            Math.round(c.temperature_2m) + "\u00B0F",
+                            Math.round(c.apparent_temperature) + "\u00B0F",
+                            Math.round(c.relative_humidity_2m) + "%",
+                            Math.round(c.wind_speed_10m) + " mph",
+                            c.precipitation.toFixed(2) + " in"
+                        ].forEach(function (text) {
+                            var cell = document.createElement("td");
+                            cell.textContent = text;
+                            row.appendChild(cell);
+                        });
+
+                        body.appendChild(row);
+                    });
+
+                    table.hidden = false;
+                    document.getElementById("credit").hidden = false;
+                    status.textContent = "Readings as of " + formatTime(results[0].current.time) + " Mountain time.";
+                })
+                .catch(function (error) {
+                    console.error("Weather load failed:", error);
+                    status.textContent = "Live readings are not available right now. The forecast links below still work.";
+                });
+        }
+
+        loadWeather();
+    </script>
+</body>
+</html>
